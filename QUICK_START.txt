@@ -1,0 +1,109 @@
+================================================================================
+  AUTHOR & TITLE MANAGER - QUICK START GUIDE
+================================================================================
+
+📦 WHAT'S INCLUDED:
+  ✓ web_app.py           - Flask backend server
+  ✓ schema.sql           - Database schema with sample data
+  ✓ setup_database.py    - Database setup script
+  ✓ templates/index.html - Frontend HTML
+  ✓ static/style.css     - Styling
+  ✓ static/script.js     - JavaScript functionality
+  ✓ requirements.txt     - Python dependencies
+  ✓ start.bat            - Quick start script
+  ✓ README.md            - Complete documentation
+
+================================================================================
+  SETUP INSTRUCTIONS
+================================================================================
+
+STEP 1: Install Python Dependencies
+  Run in terminal:
+  > pip install -r requirements.txt
+
+STEP 2: Setup Database
+  Make sure MySQL is running, then:
+  > python setup_database.py
+  
+  This will create:
+  - authors table (with 5 sample authors)
+  - titles table (with 5 sample titles)
+  - titleauthor table (with relationships)
+
+STEP 3: Start the Application
+  Option A - Use the start script:
+  > start.bat
+  
+  Option B - Run directly:
+  > python web_app.py
+
+STEP 4: Open in Browser
+  Navigate to: http://localhost:5000
+
+================================================================================
+  DATABASE CONFIGURATION
+================================================================================
+
+Default settings (in web_app.py line 13-17):
+  Host: localhost
+  User: root
+  Password: Ajay@070804
+  Database: BooksDB
+
+To change, edit web_app.py or use environment variables (.env file)
+
+================================================================================
+  FEATURES
+================================================================================
+
+AUTHORS TAB:
+  - Add authors with full contact info (name, phone, address, city, state, ZIP)
+  - Edit existing authors
+  - Delete authors (orphaned titles are also deleted)
+  - Contract status tracking
+
+TITLES TAB:
+  - Add titles with comprehensive details (price, advance, royalty, sales, etc.)
+  - Link to multiple authors with individual royalty percentages
+  - Edit existing titles
+  - Delete titles
+
+VIEW BY AUTHOR TAB:
+  - Filter titles by author
+  - See royalty percentages
+  - View publication dates
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+Problem: Database connection error
+Solution: 
+  - Check MySQL is running
+  - Verify BooksDB database exists
+  - Check credentials in web_app.py
+
+Problem: Port 5000 already in use
+Solution:
+  - Change port in web_app.py (last line)
+  - Use: app.run(debug=True, host='0.0.0.0', port=5001)
+
+Problem: Module not found
+Solution:
+  - Run: pip install -r requirements.txt
+
+================================================================================
+  HOSTING ONLINE
+================================================================================
+
+To host this application online, see README.md for detailed instructions on:
+  - PythonAnywhere (Free tier available)
+  - Heroku
+  - Railway
+  - DigitalOcean
+
+================================================================================
+
+For complete documentation, see README.md
+
+Enjoy! 📚✨

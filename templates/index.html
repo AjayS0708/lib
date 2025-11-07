@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Author & Title Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-book-reader"></i> Author & Title Manager</h1>
+                <p class="subtitle">Complete library management system</p>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="authors">
+                <i class="fas fa-user-edit"></i> Authors
+            </button>
+            <button class="tab-btn" data-tab="titles">
+                <i class="fas fa-book"></i> Titles
+            </button>
+            <button class="tab-btn" data-tab="view">
+                <i class="fas fa-search"></i> View by Author
+            </button>
+        </div>
+
+        <!-- Authors Tab -->
+        <div id="authors" class="tab-content active">
+            <div class="grid-2">
+                <!-- Add/Edit Author Card -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-user-plus"></i> Add / Edit Author
+                    </h2>
+                    <form id="authorForm" class="form">
+                        <input type="hidden" id="authorId">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="authorFname">First Name</label>
+                                <input type="text" id="authorFname" placeholder="Virat">
+                            </div>
+                            <div class="form-group">
+                                <label for="authorName">Last Name *</label>
+                                <input type="text" id="authorName" required placeholder="kohli">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="authorPhone">Phone</label>
+                            <input type="tel" id="authorPhone" placeholder="+91 98765 43210">
+                        </div>
+                        <div class="form-group">
+                            <label for="authorAddress">Address</label>
+                            <input type="text" id="authorAddress" placeholder="12 MG Road">
+                        </div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label for="authorCity">City</label>
+                                <input type="text" id="authorCity" placeholder="Mumbai">
+                            </div>
+                            <div class="form-group">
+                                <label for="authorState">State</label>
+                                <input type="text" id="authorState" placeholder="Maharashtra">
+                            </div>
+                            <div class="form-group">
+                                <label for="authorZip">PIN</label>
+                                <input type="text" id="authorZip" placeholder="400001">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="authorContract">
+                                <span>Has Contract</span>
+                            </label>
+                        </div>
+                        <div class="btn-group">
+                            <button type="submit" class="btn btn-primary" id="addAuthorBtn">
+                                <i class="fas fa-plus"></i> Add Author
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="updateAuthorBtn" style="display:none;">
+                                <i class="fas fa-save"></i> Update
+                            </button>
+                            <button type="button" class="btn btn-danger" id="deleteAuthorBtn" style="display:none;">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                            <button type="button" class="btn btn-light" id="cancelAuthorBtn" style="display:none;">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Authors List Card -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-users"></i> Authors List
+                    </h2>
+                    <div class="list-container">
+                        <div id="authorsList" class="list">
+                            <!-- Authors will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Titles Tab -->
+        <div id="titles" class="tab-content">
+            <!-- Add Title Section -->
+            <div class="card mb-2">
+                <h2 class="card-title">
+                    <i class="fas fa-book-medical"></i> Add New Title
+                </h2>
+                <form id="addTitleForm" class="form">
+                    <div class="form-group">
+                        <label for="titleName">Title *</label>
+                        <input type="text" id="titleName" required placeholder="Enter book title">
+                    </div>
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label for="titleType">Type</label>
+                            <select id="titleType">
+                                <option value="">Select type</option>
+                                <option value="business">Business</option>
+                                <option value="mod_cook">Modern Cooking</option>
+                                <option value="popular_comp">Popular Computing</option>
+                                <option value="psychology">Psychology</option>
+                                <option value="trad_cook">Traditional Cooking</option>
+                                <option value="UNDECIDED">Undecided</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="titlePubId">Publisher ID</label>
+                            <input type="text" id="titlePubId" placeholder="0736" maxlength="4">
+                        </div>
+                        <div class="form-group">
+                            <label for="titlePrice">Price</label>
+                            <input type="number" id="titlePrice" step="0.01" placeholder="19.99">
+                        </div>
+                    </div>
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label for="titleAdvance">Advance</label>
+                            <input type="number" id="titleAdvance" step="0.01" placeholder="5000.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="titleRoyalty">Royalty %</label>
+                            <input type="number" id="titleRoyalty" min="0" max="100" placeholder="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="titleYtdSales">YTD Sales</label>
+                            <input type="number" id="titleYtdSales" placeholder="4095">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="titleAuthor">Author *</label>
+                            <select id="titleAuthor" required>
+                                <option value="">Select an author</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="titleRoyaltyPer">Author Royalty %</label>
+                            <input type="number" id="titleRoyaltyPer" min="0" max="100" value="100" placeholder="100">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="titlePubDate">Publication Date</label>
+                        <input type="date" id="titlePubDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="titleNotes">Notes</label>
+                        <textarea id="titleNotes" rows="3" placeholder="Additional notes about the title"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Title
+                    </button>
+                </form>
+            </div>
+
+            <!-- Titles Management Section -->
+            <div class="grid-2">
+                <!-- Titles List -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-list"></i> Titles List
+                    </h2>
+                    <div class="list-container">
+                        <div id="titlesList" class="list">
+                            <!-- Titles will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Title -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-edit"></i> Edit Selected Title
+                    </h2>
+                    <div id="editTitleSection" class="empty-state">
+                        <i class="fas fa-hand-pointer"></i>
+                        <p>Select a title from the list to edit</p>
+                    </div>
+                    <form id="editTitleForm" class="form" style="display:none;">
+                        <input type="hidden" id="editTitleId">
+                        <div class="form-group">
+                            <label for="editTitleName">Title *</label>
+                            <input type="text" id="editTitleName" required>
+                        </div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label for="editTitleType">Type</label>
+                                <select id="editTitleType">
+                                    <option value="">Select type</option>
+                                    <option value="business">Business</option>
+                                    <option value="mod_cook">Modern Cooking</option>
+                                    <option value="popular_comp">Popular Computing</option>
+                                    <option value="psychology">Psychology</option>
+                                    <option value="trad_cook">Traditional Cooking</option>
+                                    <option value="UNDECIDED">Undecided</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editTitlePubId">Publisher ID</label>
+                                <input type="text" id="editTitlePubId" maxlength="4">
+                            </div>
+                            <div class="form-group">
+                                <label for="editTitlePrice">Price</label>
+                                <input type="number" id="editTitlePrice" step="0.01">
+                            </div>
+                        </div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label for="editTitleAdvance">Advance</label>
+                                <input type="number" id="editTitleAdvance" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="editTitleRoyalty">Royalty %</label>
+                                <input type="number" id="editTitleRoyalty" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="editTitleYtdSales">YTD Sales</label>
+                                <input type="number" id="editTitleYtdSales">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editTitlePubDate">Publication Date</label>
+                            <input type="date" id="editTitlePubDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="editTitleNotes">Notes</label>
+                            <textarea id="editTitleNotes" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Authors (with royalty %) *</label>
+                            <div id="editTitleAuthors" class="authors-royalty-list">
+                                <!-- Author checkboxes with royalty inputs will be loaded here -->
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="fas fa-save"></i> Update Title
+                            </button>
+                            <button type="button" class="btn btn-danger" id="deleteTitleBtn">
+                                <i class="fas fa-trash"></i> Delete Title
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- View by Author Tab -->
+        <div id="view" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">
+                    <i class="fas fa-filter"></i> View Titles by Author
+                </h2>
+                <div class="form-group">
+                    <label for="viewAuthorSelect">Select Author</label>
+                    <select id="viewAuthorSelect">
+                        <option value="">Choose an author</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="viewTitlesBtn">
+                    <i class="fas fa-search"></i> Show Titles
+                </button>
+                
+                <div id="viewTitlesResult" class="mt-2" style="display:none;">
+                    <h3 class="section-title">Titles by <span id="selectedAuthorName"></span></h3>
+                    <div class="table-container">
+                        <table id="titlesTable">
+                            <thead>
+                                <tr>
+                                    <th>Title ID</th>
+                                    <th>Title</th>
+                                    <th>Type</th>
+                                    <th>Price</th>
+                                    <th>Royalty %</th>
+                                    <th>Pub Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="titlesTableBody">
+                                <!-- Titles will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
