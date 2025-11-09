@@ -15,7 +15,9 @@ DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
     'password': os.getenv('DB_PASSWORD', 'Ajay@070804'),
-    'database': os.getenv('DB_NAME', 'BooksDB')
+    'database': os.getenv('DB_NAME', 'BooksDB'),
+    # allow an explicit port (useful on cloud providers)
+    'port': int(os.getenv('DB_PORT', '3306'))
 }
 
 @contextmanager

@@ -24,6 +24,19 @@ function showError(error) {
     showToast(error.message || 'An error occurred', 'error');
 }
 
+// Safe fetch helper: returns {ok, status, data, text}
+async function safeFetchJson(url, opts) {
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    let data = null;
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch (e) {
+        // not JSON
+    }
+    return { ok: res.ok, status: res.status, data, text };
+}
+
 // ----------------- Locale helpers (Indian formats) -----------------
 function formatCurrencyINR(value) {
     if (value === null || value === undefined || value === '') return '';
