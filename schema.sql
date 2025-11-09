@@ -11,7 +11,7 @@ CREATE TABLE authors (
     phone VARCHAR(20),
     address VARCHAR(100),
     city VARCHAR(50),
-    State VARCHAR(50),
+    state VARCHAR(50),
     zip VARCHAR(10),
     contract BOOLEAN DEFAULT FALSE
 );
@@ -41,8 +41,8 @@ CREATE TABLE titleauthor (
     FOREIGN KEY (title_id) REFERENCES titles(title_id) ON DELETE CASCADE
 );
 
--- Sample data for authors
-INSERT INTO authors (au_id, au_Fname, au_Lname, phone, address, city, state, zip, contract) VALUES
+-- Sample data for authors (au_id, au_fname, au_name)
+INSERT INTO authors (au_id, au_fname, au_name, phone, address, city, state, zip, contract) VALUES
 ('1', 'Vimal', 'Johnson', '+91 98765 43210', '10932 Bigge Rd.', 'Mumbai', 'Maharashtra', '400001', TRUE),
 ('2', 'Girish', 'Marjorie', '+91 91234 56789', '309 63rd St. #411', 'Bengaluru', 'Karnataka', '560001', TRUE),
 ('3', 'Chinmau', 'Cheryl', '+91 99876 54321', '589 Darwin Ln.', 'Chennai', 'Tamil Nadu', '600001', TRUE),
@@ -55,7 +55,7 @@ INSERT INTO titles (title_id, title, type, pub_id, price, advance, royalty, ytd_
 ('BU2', 'Cooking with Computers: Surreptitious Balance Sheets', 'business', '1389', 11.95, 5000.00, 10, 3876, 'Helpful hints on how to use your computer', '2023-06-09'),
 ('BU3', 'You Can Combat Computer Stress!', 'business', '0736', 2.99, 10125.00, 24, 18722, 'Latest medical and psychological techniques', '2023-06-30'),
 ('BU4', 'Straight Talk About Computers', 'business', '1389', 19.99, 5000.00, 10, 4095, 'Annotated analysis of what computers can do', '2023-06-22'),
-('BU%', 'Silicon Valley Gastronomic Treats', 'mod_cook', '0877', 19.99, 0.00, 12, 2032, 'Favorite recipes from Silicon Valley', '2023-06-09');
+('BU5', 'Silicon Valley Gastronomic Treats', 'mod_cook', '0877', 19.99, 0.00, 12, 2032, 'Favorite recipes from Silicon Valley', '2023-06-09');
 
 -- Sample data for titleauthor
 INSERT INTO titleauthor (au_id, title_id, au_ord, royaltyper) VALUES
@@ -65,5 +65,5 @@ INSERT INTO titleauthor (au_id, title_id, au_ord, royaltyper) VALUES
 ('4', 'BU2', 2, 0),
 ('5', 'BU4', 1, 100);
 
-
-select  * from titles;
+-- Simple select for manual verification
+SELECT * FROM titles;

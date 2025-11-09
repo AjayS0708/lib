@@ -430,9 +430,14 @@ function populateAuthorSelects() {
 document.getElementById('addTitleForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // Prefer custom genre if provided
+    const genreSelect = document.getElementById('titleType');
+    const otherGenre = document.getElementById('titleGenreOther');
+    const selectedGenre = (otherGenre && otherGenre.style.display !== 'none' && otherGenre.value.trim()) ? otherGenre.value.trim() : genreSelect.value.trim();
+
     const titleData = {
         title: document.getElementById('titleName').value.trim(),
-        type: document.getElementById('titleType').value.trim(),
+        type: selectedGenre,
         pub_id: document.getElementById('titlePubId').value.trim(),
         price: document.getElementById('titlePrice').value.trim(),
         advance: document.getElementById('titleAdvance').value.trim(),
@@ -489,9 +494,14 @@ document.getElementById('editTitleForm').addEventListener('submit', async (e) =>
         return;
     }
     
+    // Prefer custom genre if provided for edit
+    const editGenreSelect = document.getElementById('editTitleType');
+    const editOtherGenre = document.getElementById('editTitleGenreOther');
+    const editSelectedGenre = (editOtherGenre && editOtherGenre.style.display !== 'none' && editOtherGenre.value.trim()) ? editOtherGenre.value.trim() : editGenreSelect.value.trim();
+
     const titleData = {
         title: document.getElementById('editTitleName').value.trim(),
-        type: document.getElementById('editTitleType').value.trim(),
+        type: editSelectedGenre,
         pub_id: document.getElementById('editTitlePubId').value.trim(),
         price: document.getElementById('editTitlePrice').value.trim(),
         advance: document.getElementById('editTitleAdvance').value.trim(),
@@ -618,3 +628,24 @@ async function init() {
 
 // Start the application
 init();
+
+// Genre select toggles for custom "Other" input
+function setupGenreToggles() {
+    const genreSelect = document.getElementById('titleType');
+    const otherInput = document.getElementById('titleGenreOther');
+    if (genreSelect && otherInput) {
+        genreSelect.addEventListener('change', () => {
+            otherInput.style.display = (genreSelect.value === 'other') ? 'block' : 'none';
+        });
+    }
+
+    const editGenreSelect = document.getElementById('editTitleType');
+    const editOtherInput = document.getElementById('editTitleGenreOther');
+    if (editGenreSelect && editOtherInput) {
+        editGenreSelect.addEventListener('change', () => {
+            editOtherInput.style.display = (editGenreSelect.value === 'other') ? 'block' : 'none';
+        });
+    }
+}
+
+setupGenreToggles();

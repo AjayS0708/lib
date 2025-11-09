@@ -9,8 +9,8 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header class="header">
+
             <div class="header-content">
                 <h1><i class="fas fa-book-reader"></i> Author & Title Manager</h1>
                 <p class="subtitle">Complete library management system</p>
@@ -123,16 +123,18 @@
                     </div>
                     <div class="grid-3">
                         <div class="form-group">
-                            <label for="titleType">Type</label>
+                            <label for="titleType">Genre</label>
                             <select id="titleType">
-                                <option value="">Select type</option>
-                                <option value="business">Business</option>
-                                <option value="mod_cook">Modern Cooking</option>
-                                <option value="popular_comp">Popular Computing</option>
-                                <option value="psychology">Psychology</option>
-                                <option value="trad_cook">Traditional Cooking</option>
-                                <option value="UNDECIDED">Undecided</option>
+                                <option value="">Select genre</option>
+                                    <option value="horror">Horror</option>
+                                    <option value="comedy">Comedy</option>
+                                    <option value="thriller">Thriller</option>
+                                    <option value="fantasy">Fantasy</option>
+                                    <option value="non-fiction">Non-Fiction</option>
+                                    <option value="romance">Romance</option>
+                                    <option value="other">Other (specify)</option>
                             </select>
+                                <input type="text" id="titleGenreOther" placeholder="Specify genre" style="display:none; margin-top:8px;">
                         </div>
                         <div class="form-group">
                             <label for="titlePubId">Publisher ID</label>
@@ -214,16 +216,18 @@
                         </div>
                         <div class="grid-3">
                             <div class="form-group">
-                                <label for="editTitleType">Type</label>
+                                <label for="editTitleType">Genre</label>
                                 <select id="editTitleType">
-                                    <option value="">Select type</option>
-                                    <option value="business">Business</option>
-                                    <option value="mod_cook">Modern Cooking</option>
-                                    <option value="popular_comp">Popular Computing</option>
-                                    <option value="psychology">Psychology</option>
-                                    <option value="trad_cook">Traditional Cooking</option>
-                                    <option value="UNDECIDED">Undecided</option>
+                                    <option value="">Select genre</option>
+                                        <option value="horror">Horror</option>
+                                        <option value="comedy">Comedy</option>
+                                        <option value="thriller">Thriller</option>
+                                        <option value="fantasy">Fantasy</option>
+                                        <option value="non-fiction">Non-Fiction</option>
+                                        <option value="romance">Romance</option>
+                                        <option value="other">Other (specify)</option>
                                 </select>
+                                    <input type="text" id="editTitleGenreOther" placeholder="Specify genre" style="display:none; margin-top:8px;">
                             </div>
                             <div class="form-group">
                                 <label for="editTitlePubId">Publisher ID</label>
