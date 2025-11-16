@@ -190,6 +190,21 @@ BooksDB/
 
 ## 🌐 Deployment
 
+### ⚠️ Important: Platform Compatibility
+
+**❌ Vercel is NOT recommended** for this application because:
+- Vercel is designed for serverless functions (stateless, short-lived)
+- This Flask app requires persistent MongoDB connections
+- Database connections will fail on Vercel's serverless architecture
+
+**✅ Recommended Platforms:**
+1. **Render** (⭐ Best choice - Free tier, easy setup) - See `DEPLOYMENT.md`
+2. **Railway** (Great for Python apps)
+3. **Fly.io** (Modern, fast deployments)
+4. **PythonAnywhere** (Simple, beginner-friendly)
+
+📖 **For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
+
 ### Environment Variables for Production
 
 Set these environment variables on your hosting platform:
@@ -198,14 +213,31 @@ Set these environment variables on your hosting platform:
 MONGODB_URI=your_mongodb_connection_string
 DB_NAME=BooksDB
 FLASK_DEBUG=False
-PORT=5000
+PORT=5000  # Or use platform's PORT variable (e.g., $PORT for Railway, 10000 for Render)
 ```
 
-### Deployment Platforms
+### Quick Deployment Guide
+
+#### Render (Recommended - Free Tier)
+1. Go to [Render.com](https://render.com) and sign up
+2. Click **"New +"** → **"Web Service"**
+3. Connect your GitHub repository
+4. Configure:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+5. Add environment variables (see above)
+6. Deploy! Your app will be live in 5-10 minutes
+
+#### Railway
+1. Go to [Railway.app](https://railway.app) and sign up
+2. Click **"New Project"** → **"Deploy from GitHub repo"**
+3. Select your repository
+4. Add environment variables
+5. Railway auto-detects Python and deploys automatically
 
 #### Heroku
 1. Install Heroku CLI
-2. Create `Procfile`:
+2. Create `Procfile` (already exists):
    ```
    web: gunicorn app:app
    ```
@@ -221,18 +253,6 @@ PORT=5000
 2. Set up web app with Flask
 3. Configure environment variables in web app settings
 4. Use MongoDB Atlas (cloud) or set up local MongoDB
-
-#### Railway
-1. Connect GitHub repository
-2. Add MongoDB service or use external MongoDB Atlas
-3. Set environment variables
-4. Deploy automatically
-
-#### Render
-1. Connect GitHub repository
-2. Set build command: `pip install -r requirements.txt`
-3. Set start command: `gunicorn app:app`
-4. Add MongoDB Atlas connection string to environment variables
 
 ### Production Checklist
 

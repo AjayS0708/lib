@@ -18,9 +18,24 @@ load_dotenv()
 MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
 DB_NAME = os.getenv('DB_NAME', 'BooksDB')
 
-# Initialize MongoDB client
-client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
+# Initialize MongoDB client with connection pooling for production
+try:
+    client = MongoClient(
+        MONGO_URI,
+        serverSelectionTimeoutMS=5000,  # 5 second timeout
+        connectTimeoutMS=5000,
+        socketTimeoutMS=5000,
+        maxPoolSize=50,  # Connection pool size
+        retryWrites=True
+    )
+    # Test connection
+    client.admin.command('ping')
+    db = client[DB_NAME]
+    print(f"✅ Successfully connected to MongoDB database: {DB_NAME}")
+except Exception as e:
+    print(f"❌ MongoDB connection error: {str(e)}")
+    print("⚠️  Make sure MONGODB_URI is set correctly in environment variables")
+    raise
 
 # Collections
 authors_collection = db['authors']

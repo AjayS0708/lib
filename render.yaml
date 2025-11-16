@@ -1,0 +1,19 @@
+# Render Blueprint for BooksDB
+# This file helps Render auto-configure your deployment
+
+services:
+  - type: web
+    name: booksdb
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: MONGODB_URI
+        sync: false  # Set this manually in Render dashboard
+      - key: DB_NAME
+        value: BooksDB
+      - key: FLASK_DEBUG
+        value: "False"
+      - key: PORT
+        value: "10000"
+
