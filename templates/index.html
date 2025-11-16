@@ -46,7 +46,7 @@
                                 <input type="text" id="authorFname" placeholder="Virat">
                             </div>
                             <div class="form-group">
-                                <label for="authorName">Last Name *</label>
+                                <label for="authorName">Last Name </label>
                                 <input type="text" id="authorName" placeholder="kohli">
                             </div>
                         </div>
@@ -287,7 +287,7 @@
                 </h2>
                 <div class="form-group">
                     <label for="viewAuthorSelect">Select Author</label>
-                    <select id="viewAuthorSelect">
+                    <select id="viewAuthorSelect" class="form-control">
                         <option value="">Choose an author</option>
                     </select>
                 </div>
@@ -295,8 +295,38 @@
                     <i class="fas fa-search"></i> Show Titles
                 </button>
                 
-                <div id="viewTitlesResult" class="mt-2" style="display:none;">
-                    <h3 class="section-title">Titles by <span id="selectedAuthorName"></span></h3>
+                <div id="viewTitlesResult" class="mt-4" style="display:none;">
+                    <div class="author-info-card mb-4">
+                        <div class="author-header">
+                            <div class="author-avatar">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                            <div class="author-details">
+                                <h3 id="selectedAuthorName" class="mb-1"></h3>
+                                <div class="author-meta">
+                                    <span id="authorContact" class="me-3">
+                                        <i class="fas fa-phone me-1"></i> 
+                                        <span id="authorPhoneDisplay"></span>
+                                    </span>
+                                    <span id="authorLocation">
+                                        <i class="fas fa-map-marker-alt me-1"></i> 
+                                        <span id="authorLocationText"></span>
+                                    </span>
+                                </div>
+                                <div class="author-stats mt-2">
+                                    <span class="badge bg-primary me-2">
+                                        <i class="fas fa-book me-1"></i>
+                                        <span id="totalTitles">0</span> Titles
+                                    </span>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-star me-1"></i>
+                                        <span id="authorRoyalty">0</span>% Avg. Royalty
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <h4 class="section-title mb-3">Published Works</h4>
                     <div class="table-container">
                         <table id="titlesTable">
                             <thead>

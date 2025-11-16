@@ -547,6 +547,91 @@ tbody tr:last-child td {
     background: var(--primary-dark);
 }
 
+/* Author Info Card */
+.author-info-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.author-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.author-avatar {
+    font-size: 3.5rem;
+    color: var(--primary);
+    background: rgba(43, 121, 194, 0.1);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.author-details {
+    flex: 1;
+}
+
+.author-details h3 {
+    font-size: 1.5rem;
+    color: var(--text);
+    margin: 0 0 8px 0;
+}
+
+.author-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.author-meta i {
+    width: 16px;
+    text-align: center;
+}
+
+.author-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.bg-primary {
+    background-color: rgba(43, 121, 194, 0.1);
+    color: var(--primary);
+}
+
+.bg-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.section-title {
+    font-size: 1.25rem;
+    color: var(--text);
+    margin: 20px 0 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     body {

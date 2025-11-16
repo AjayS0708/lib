@@ -619,17 +619,53 @@ document.getElementById('viewTitlesBtn').addEventListener('click', async () => {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/titles/by-author/${authorId}`);
-        const data = await response.json();
+        const [titlesResponse, authorResponse] = await Promise.all([
+            fetch(`${API_BASE}/titles/by-author/${authorId}`),
+            fetch(`${API_BASE}/authors/${authorId}`)
+        ]);
         
-        if (data.success) {
-            const author = authors.find(a => a.au_id === authorId);
+        const titlesData = await titlesResponse.json();
+        const authorData = await authorResponse.json();
+        
+        if (titlesData.success && authorData.success) {
+            const author = authorData.data;
             const fullName = `${author.au_fname || ''} ${author.au_name}`.trim();
+            
+            // Update author information
             document.getElementById('selectedAuthorName').textContent = fullName;
             
+            // Update contact information
+            const phoneDisplay = document.getElementById('authorPhoneDisplay');
+            phoneDisplay.textContent = author.phone || 'Not provided';
+            phoneDisplay.closest('#authorContact').style.display = author.phone ? 'inline-flex' : 'none';
+            
+            // Update location
+            const locationParts = [];
+            if (author.city) locationParts.push(author.city);
+            if (author.state) locationParts.push(author.state);
+            if (author.zip) locationParts.push(author.zip);
+            
+            const locationText = document.getElementById('authorLocationText');
+            locationText.textContent = locationParts.length > 0 ? locationParts.join(', ') : 'Location not specified';
+            
+            // Update stats
+            document.getElementById('totalTitles').textContent = titlesData.data.length;
+            
+            // Calculate average royalty if there are titles
+            if (titlesData.data.length > 0) {
+                const totalRoyalty = titlesData.data.reduce((sum, title) => {
+                    return sum + (parseFloat(title.royaltyper) || 0);
+                }, 0);
+                const avgRoyalty = (totalRoyalty / titlesData.data.length).toFixed(1);
+                document.getElementById('authorRoyalty').textContent = avgRoyalty;
+            } else {
+                document.getElementById('authorRoyalty').textContent = '0';
+            }
+            
+            // Update titles table
             const tbody = document.getElementById('titlesTableBody');
             
-            if (data.data.length === 0) {
+            if (titlesData.data.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="6" style="text-align: center; padding: 40px;">
@@ -639,7 +675,7 @@ document.getElementById('viewTitlesBtn').addEventListener('click', async () => {
                     </tr>
                 `;
             } else {
-                tbody.innerHTML = data.data.map(title => `
+                tbody.innerHTML = titlesData.data.map(title => `
                     <tr>
                         <td>${title.title_id}</td>
                         <td>${title.title}</td>
@@ -651,7 +687,10 @@ document.getElementById('viewTitlesBtn').addEventListener('click', async () => {
                 `).join('');
             }
             
-            document.getElementById('viewTitlesResult').style.display = 'block';
+            // Show the results section with a smooth scroll
+            const resultsSection = document.getElementById('viewTitlesResult');
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
         } else {
             showError(new Error(data.error));
         }
