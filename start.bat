@@ -31,6 +31,6 @@ echo.
 echo Press Ctrl+C to stop the server
 echo.
 
-python web_app.py
+python app.py
 
 pause

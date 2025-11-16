@@ -1,89 +1,76 @@
-# 📚 Author & Title Manager - Updated Web Application
+# 📚 Author & Title Manager
 
-A modern, responsive web application for managing authors and book titles with comprehensive fields matching a professional publishing database schema. Built with Flask (Python) backend and vanilla JavaScript frontend.
+A modern, responsive web application for managing authors and book titles with MongoDB. Built with Flask backend and vanilla JavaScript frontend.
 
 ## ✨ Features
 
 ### Author Management
-- **Complete Author Profiles**
-  - Author ID (auto-generated: XXX-XX-XXXX format)
-  - Last Name and First Name
-  - Phone number
-  - Full address (street, city, state, ZIP)
-  - Contract status
+- Complete author profiles with auto-generated IDs (XXX-XX-XXXX format)
+- Full contact information (name, phone, address, city, state, ZIP)
+- Contract status tracking
 - Add, edit, and delete authors
 - View all authors in an organized list
 
 ### Title Management
-- **Comprehensive Title Information**
-  - Title ID (auto-generated: LLNNNN format)
-  - Title name
-  - Type/Genre (business, cooking, computing, psychology, etc.)
-  - Publisher ID
-  - Price, Advance, and Royalty percentage
-  - Year-to-date sales
-  - Publication date
-  - Notes
+- Comprehensive title information with auto-generated IDs (LLNNNN format)
+- Book details (title, genre, publisher ID, price, advance, royalty, sales)
+- Publication dates and notes
 - Link titles to multiple authors with individual royalty percentages
 - Add, edit, and delete titles
 - View all titles with author information
 
 ### Advanced Features
-- **Author-Title Relationships**
-  - Multiple authors per title
-  - Author order tracking
-  - Individual royalty percentages per author
+- Multiple authors per title with order tracking
+- Individual royalty percentages per author
 - View all titles by a specific author
 - Automatic cleanup of orphaned titles when deleting authors
 - Real-time updates and notifications
 - Responsive design for all devices
 
-## 🗄️ Database Schema
+## 🗄️ Database
 
-The application uses three main tables:
+The application uses **MongoDB** with two collections:
 
 ### authors
-- `au_id` (VARCHAR(11), PRIMARY KEY) - Format: XXX-XX-XXXX
-- `au_name` (VARCHAR(100)) - Last name
-- `au_fname` (VARCHAR(50)) - First name
-- `phone` (VARCHAR(20))
-- `address` (VARCHAR(100))
-- `city` (VARCHAR(50))
-- `state` (VARCHAR(2))
-- `zip` (VARCHAR(10))
-- `contract` (BOOLEAN)
+- `au_id` - Author ID (format: XXX-XX-XXXX)
+- `au_name` - Last name (required)
+- `au_fname` - First name
+- `phone` - Phone number
+- `address` - Street address
+- `city` - City
+- `state` - State
+- `zip` - ZIP code
+- `contract` - Contract status (boolean)
 
 ### titles
-- `title_id` (VARCHAR(6), PRIMARY KEY) - Format: LLNNNN
-- `title` (VARCHAR(255))
-- `type` (VARCHAR(50))
-- `pub_id` (VARCHAR(4))
-- `price` (DECIMAL(10,2))
-- `advance` (DECIMAL(10,2))
-- `royalty` (INT) - Overall royalty percentage
-- `ytd_sales` (INT) - Year-to-date sales
-- `notes` (TEXT)
-- `pubdate` (DATE)
-
-### titleauthor (Junction Table)
-- `au_id` (VARCHAR(11), FOREIGN KEY)
-- `title_id` (VARCHAR(6), FOREIGN KEY)
-- `au_ord` (INT) - Author order
-- `royaltyper` (INT) - Individual author's royalty percentage
+- `title_id` - Title ID (format: LLNNNN)
+- `title` - Title name (required)
+- `type` - Genre/type
+- `pub_id` - Publisher ID
+- `price` - Price
+- `advance` - Advance payment
+- `royalty` - Royalty percentage
+- `ytd_sales` - Year-to-date sales
+- `notes` - Additional notes
+- `pubdate` - Publication date
+- `authors` - Array of authors with:
+  - `au_id` - Author ID
+  - `au_ord` - Author order
+  - `royaltyper` - Author's royalty percentage
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- MySQL Server 5.7 or higher
+- MongoDB (local or cloud instance like MongoDB Atlas)
 - pip (Python package manager)
 
 ### Installation
 
-1. **Navigate to the project directory**
+1. **Clone or download the project**
    ```bash
-   cd "C:\Users\ajays\OneDrive\Desktop\Amazon Clone"
+   cd BooksDB
    ```
 
 2. **Install dependencies**
@@ -91,31 +78,32 @@ The application uses three main tables:
    pip install -r requirements.txt
    ```
 
-3. **Set up the database**
+3. **Set up environment variables**
 
-   **Option A: Using Python script (Recommended)**
-   ```bash
-   python setup_database.py
+   Create a `.env` file in the project root:
+   ```env
+   MONGODB_URI=mongodb://localhost:27017/
+   DB_NAME=BooksDB
+   FLASK_DEBUG=False
+   PORT=5000
    ```
 
-   **Option B: Using MySQL directly**
-   ```bash
-   mysql -u root -p BooksDB < schema.sql
+   For MongoDB Atlas:
+   ```env
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
+   DB_NAME=BooksDB
    ```
-
-   **Option C: Manual setup**
-   - Open MySQL Workbench or command line
-   - Connect to your MySQL server
-   - Run the contents of `schema.sql`
 
 4. **Run the application**
-   ```bash
-   python web_app.py
-   ```
-   
-   Or use the quick start script:
+
+   **Option A: Using the start script (Windows)**
    ```bash
    start.bat
+   ```
+
+   **Option B: Run directly**
+   ```bash
+   python app.py
    ```
 
 5. **Open in browser**
@@ -125,21 +113,17 @@ The application uses three main tables:
 ## 📁 Project Structure
 
 ```
-Amazon Clone/
-├── web_app.py              # Flask backend with API endpoints
-├── schema.sql              # Database schema with sample data
-├── setup_database.py       # Python script to set up database
-├── setup_database.bat      # Windows batch script for database setup
-├── start.bat               # Quick start script
-├── templates/
-│   └── index.html          # Main HTML template
-├── static/
-│   ├── style.css           # Styling and responsive design
-│   └── script.js           # Frontend JavaScript logic
+BooksDB/
+├── app.py                  # Flask backend with API endpoints
 ├── requirements.txt        # Python dependencies
-├── .env.example           # Environment variables template
+├── start.bat              # Quick start script (Windows)
+├── .env                   # Environment variables (create this)
 ├── .gitignore             # Git ignore rules
-└── UPDATED_README.md      # This file
+├── templates/
+│   └── index.html         # Main HTML template
+└── static/
+    ├── style.css          # Styling and responsive design
+    └── script.js          # Frontend JavaScript logic
 ```
 
 ## 🎨 Technology Stack
@@ -147,14 +131,14 @@ Amazon Clone/
 ### Backend
 - **Flask** - Python web framework
 - **Flask-CORS** - Cross-origin resource sharing
-- **MySQL Connector** - Database connectivity
+- **PyMongo** - MongoDB driver for Python
 - **Python-dotenv** - Environment variable management
 
 ### Frontend
 - **HTML5** - Structure
-- **CSS3** - Modern styling with gradients, animations, and responsive design
-- **Vanilla JavaScript** - No frameworks, pure JS for maximum performance
-- **Font Awesome** - Beautiful icons
+- **CSS3** - Modern styling with responsive design
+- **Vanilla JavaScript** - Pure JS for maximum performance
+- **Font Awesome** - Icons
 
 ## 🔌 API Endpoints
 
@@ -163,15 +147,15 @@ Amazon Clone/
 - `POST /api/authors` - Add a new author
 - `GET /api/authors/<au_id>` - Get a specific author
 - `PUT /api/authors/<au_id>` - Update an author
-- `DELETE /api/authors/<au_id>` - Delete an author
+- `DELETE /api/authors/<au_id>` - Delete an author (and orphaned titles)
 
 ### Titles
-- `GET /api/titles` - Get all titles
+- `GET /api/titles` - Get all titles with authors
 - `POST /api/titles` - Add a new title
 - `GET /api/titles/<title_id>` - Get a specific title
 - `PUT /api/titles/<title_id>` - Update a title
 - `DELETE /api/titles/<title_id>` - Delete a title
-- `GET /api/titles/by-author/<au_id>` - Get titles by author
+- `GET /api/titles/by-author/<au_id>` - Get all titles by an author
 
 ### Health
 - `GET /api/health` - Check API and database status
@@ -180,10 +164,7 @@ Amazon Clone/
 
 ### Managing Authors
 1. Go to the **Authors** tab
-2. Fill in the author details:
-   - Last name (required)
-   - First name, phone, address, city, state, ZIP (optional)
-   - Check "Has Contract" if applicable
+2. Fill in the author details (Last name is required)
 3. Click **Add Author** (ID is auto-generated)
 4. To edit: Click on an author in the list, modify details, click **Update**
 5. To delete: Select an author and click **Delete**
@@ -192,10 +173,8 @@ Amazon Clone/
 1. Go to the **Titles** tab
 2. In the "Add New Title" section, enter:
    - Title name (required)
-   - Type, publisher ID, price, advance, royalty, sales
    - Select an author (required)
-   - Set author's royalty percentage
-   - Publication date and notes
+   - Fill in other details as needed
 3. Click **Add Title** (ID is auto-generated)
 4. To edit: Click on a title in the list
    - Modify details
@@ -209,71 +188,94 @@ Amazon Clone/
 3. Click **Show Titles**
 4. View all titles by that author with royalty information
 
-## 📊 Sample Data
+## 🌐 Deployment
 
-The `schema.sql` file includes sample data:
-- 5 sample authors (White, Green, Carson, O'Leary, Straight)
-- 5 sample titles (business and cooking books)
-- Author-title relationships with royalty splits
+### Environment Variables for Production
+
+Set these environment variables on your hosting platform:
+
+```env
+MONGODB_URI=your_mongodb_connection_string
+DB_NAME=BooksDB
+FLASK_DEBUG=False
+PORT=5000
+```
+
+### Deployment Platforms
+
+#### Heroku
+1. Install Heroku CLI
+2. Create `Procfile`:
+   ```
+   web: gunicorn app:app
+   ```
+3. Deploy:
+   ```bash
+   heroku create
+   git push heroku main
+   heroku config:set MONGODB_URI=your_mongodb_uri
+   ```
+
+#### PythonAnywhere
+1. Upload files via Files tab
+2. Set up web app with Flask
+3. Configure environment variables in web app settings
+4. Use MongoDB Atlas (cloud) or set up local MongoDB
+
+#### Railway
+1. Connect GitHub repository
+2. Add MongoDB service or use external MongoDB Atlas
+3. Set environment variables
+4. Deploy automatically
+
+#### Render
+1. Connect GitHub repository
+2. Set build command: `pip install -r requirements.txt`
+3. Set start command: `gunicorn app:app`
+4. Add MongoDB Atlas connection string to environment variables
+
+### Production Checklist
+
+- [ ] Set `FLASK_DEBUG=False` in production
+- [ ] Use MongoDB Atlas or secure MongoDB instance
+- [ ] Set strong MongoDB credentials
+- [ ] Enable HTTPS/SSL
+- [ ] Use environment variables for all sensitive data
+- [ ] Set up MongoDB backups
+- [ ] Test all CRUD operations
+- [ ] Configure error logging
+- [ ] Set up monitoring
 
 ## 🐛 Troubleshooting
 
 ### Database Connection Error
-- Ensure MySQL server is running
-- Check database credentials in `web_app.py` (line 15)
-- Verify `BooksDB` database exists
-- Run `setup_database.py` to create tables
+- Check MongoDB is running (if local) or connection string is correct
+- Verify MongoDB Atlas network access settings
+- Check credentials in `.env` file
 
 ### Port Already in Use
-- Change the port in `web_app.py` (last line):
-  ```python
-  app.run(debug=True, host='0.0.0.0', port=5001)
-  ```
+- Change port in environment variables: `PORT=5001`
+- Or stop the process using port 5000
 
 ### Module Not Found Error
 - Run `pip install -r requirements.txt`
+- Make sure virtual environment is activated
 
-### Schema Errors
-- Drop existing tables manually if needed:
-  ```sql
-  DROP TABLE IF EXISTS titleauthor;
-  DROP TABLE IF EXISTS titles;
-  DROP TABLE IF EXISTS authors;
-  ```
-- Then run `setup_database.py` again
-
-## 🔄 Migrating from Old Schema
-
-If you have data in the old schema (AuthorID, AuthorName, TitleID, BookTitle):
-
-1. **Backup your data first!**
-2. Export existing data
-3. Run the new schema setup
-4. Manually import data with field mapping:
-   - `AuthorID` → `au_id` (may need reformatting)
-   - `AuthorName` → `au_name`
-   - `TitleID` → `title_id` (may need reformatting)
-   - `BookTitle` → `title`
-
-## 🌐 Hosting Options
-
-Same as before:
-- PythonAnywhere (Free tier available)
-- Heroku
-- Railway
-- DigitalOcean App Platform
-
-See `WEB_README.md` for detailed hosting instructions.
+### MongoDB Connection Issues
+- For MongoDB Atlas: Check IP whitelist and credentials
+- For local MongoDB: Ensure MongoDB service is running
+- Verify connection string format
 
 ## 🔒 Security Notes
 
 ⚠️ **Important for production:**
 
-1. **Use environment variables** for database credentials
-2. **Never commit passwords** to Git
-3. **Use HTTPS** in production
-4. **Add authentication** if hosting publicly
-5. **Validate all inputs** on the server side
+1. **Never commit `.env` file** - Already in `.gitignore`
+2. **Use strong MongoDB credentials**
+3. **Enable HTTPS/SSL** on hosting platform
+4. **Use MongoDB Atlas** with network access restrictions
+5. **Validate all inputs** on server side (already implemented)
+6. **Consider adding authentication** for public deployments
 
 ## 📝 License
 
@@ -285,4 +287,4 @@ Feel free to fork, modify, and improve this application!
 
 ---
 
-**Enjoy managing your publishing database! 📚✨**
+**Enjoy managing your library! 📚✨**

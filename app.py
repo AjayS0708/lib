@@ -1,35 +1,30 @@
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
-import mysql.connector
-from contextlib import contextmanager
-import os
+from pymongo import MongoClient
+from bson import ObjectId
 from datetime import datetime
+import os
 import random
 import string
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 CORS(app)
 
-# Database configuration
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', 'Ajay@070804'),
-    'database': os.getenv('DB_NAME', 'BooksDB'),
-    # allow an explicit port (useful on cloud providers)
-    'port': int(os.getenv('DB_PORT', '3306'))
-}
+# Load environment variables
+load_dotenv()
 
-@contextmanager
-def get_db_connection():
-    """Context manager for database connections"""
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor(dictionary=True)
-    try:
-        yield cursor, conn
-    finally:
-        cursor.close()
-        conn.close()
+# MongoDB connection
+MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+DB_NAME = os.getenv('DB_NAME', 'BooksDB')
+
+# Initialize MongoDB client
+client = MongoClient(MONGO_URI)
+db = client[DB_NAME]
+
+# Collections
+authors_collection = db['authors']
+titles_collection = db['titles']
 
 def generate_author_id():
     """Generate a unique author ID in format XXX-XX-XXXX"""
@@ -41,6 +36,17 @@ def generate_title_id():
     numbers = ''.join(random.choices(string.digits, k=4))
     return letters + numbers
 
+def serialize_objectid(obj):
+    """Recursively convert ObjectId instances to strings in dictionaries and lists"""
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {key: serialize_objectid(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_objectid(item) for item in obj]
+    else:
+        return obj
+
 # ==================== MAIN PAGE ====================
 
 @app.route('/')
@@ -50,20 +56,27 @@ def index():
 
 # ==================== AUTHOR ENDPOINTS ====================
 
+def serialize_author(author):
+    """Convert MongoDB document to JSON serializable format"""
+    if not author:
+        return None
+    author['_id'] = str(author['_id'])  # Convert ObjectId to string
+    return author
+
 @app.route('/api/authors', methods=['GET'])
 def get_authors():
     """Get all authors"""
     try:
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                SELECT au_id, au_name, au_fname, phone, address, city, state, zip, contract 
-                FROM authors 
-                ORDER BY au_id ASC
-            """)
-            authors = cursor.fetchall()
-            return jsonify({'success': True, 'data': authors})
+        authors = list(authors_collection.find({}).sort('au_id', 1))
+        return jsonify({
+            'success': True, 
+            'data': [serialize_author(author) for author in authors]
+        })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/authors', methods=['POST'])
 def add_author():
@@ -71,113 +84,207 @@ def add_author():
     try:
         data = request.json
         au_name = data.get('au_name', '').strip()
-        au_fname = data.get('au_fname', '').strip() or None
-        phone = data.get('phone', '').strip() or None
-        address = data.get('address', '').strip() or None
-        city = data.get('city', '').strip() or None
-        state = data.get('state', '').strip() or None
-        zip_code = data.get('zip', '').strip() or None
-        contract = data.get('contract', False)
         
         if not au_name:
             return jsonify({'success': False, 'error': 'Author last name is required'}), 400
         
-        # Generate unique author ID
-        au_id = generate_author_id()
+        # Create author document
+        author = {
+            'au_id': generate_author_id(),
+            'au_name': au_name,
+            'au_fname': data.get('au_fname', '').strip() or None,
+            'phone': data.get('phone', '').strip() or None,
+            'address': data.get('address', '').strip() or None,
+            'city': data.get('city', '').strip() or None,
+            'state': data.get('state', '').strip() or None,
+            'zip': data.get('zip', '').strip() or None,
+            'contract': data.get('contract', False)
+        }
         
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                INSERT INTO authors (au_id, au_name, au_fname, phone, address, city, state, zip, contract)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (au_id, au_name, au_fname, phone, address, city, state, zip_code, contract))
-            conn.commit()
-            return jsonify({'success': True, 'message': 'Author added successfully', 'id': au_id})
+        # Insert into MongoDB
+        result = authors_collection.insert_one(author)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Author added successfully', 
+            'id': author['au_id'],
+            'mongo_id': str(result.inserted_id)
+        })
+        
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 @app.route('/api/authors/<au_id>', methods=['GET'])
 def get_author(au_id):
     """Get a specific author"""
     try:
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                SELECT au_id, au_name, au_fname, phone, address, city, state, zip, contract 
-                FROM authors 
-                WHERE au_id = %s
-            """, (au_id,))
-            author = cursor.fetchone()
-            
-            if not author:
-                return jsonify({'success': False, 'error': 'Author not found'}), 404
-            
-            return jsonify({'success': True, 'data': author})
+        author = authors_collection.find_one({'au_id': au_id})
+        if author:
+            return jsonify({
+                'success': True, 
+                'data': serialize_author(author)
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'error': 'Author not found'
+            }), 404
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/authors/<au_id>', methods=['PUT'])
 def update_author(au_id):
     """Update an existing author"""
     try:
         data = request.json
-        au_name = data.get('au_name', '').strip()
-        au_fname = data.get('au_fname', '').strip() or None
-        phone = data.get('phone', '').strip() or None
-        address = data.get('address', '').strip() or None
-        city = data.get('city', '').strip() or None
-        state = data.get('state', '').strip() or None
-        zip_code = data.get('zip', '').strip() or None
-        contract = data.get('contract', False)
+        updates = {}
         
-        if not au_name:
-            return jsonify({'success': False, 'error': 'Author last name is required'}), 400
+        # Only include fields that are provided and not empty
+        if 'au_name' in data and data['au_name'].strip():
+            updates['au_name'] = data['au_name'].strip()
+        if 'au_fname' in data:
+            updates['au_fname'] = data['au_fname'].strip() if data['au_fname'].strip() else None
+        if 'phone' in data:
+            updates['phone'] = data['phone'].strip() if data['phone'].strip() else None
+        if 'address' in data:
+            updates['address'] = data['address'].strip() if data['address'].strip() else None
+        if 'city' in data:
+            updates['city'] = data['city'].strip() if data['city'].strip() else None
+        if 'state' in data:
+            updates['state'] = data['state'].strip() if data['state'].strip() else None
+        if 'zip' in data:
+            updates['zip'] = data['zip'].strip() if data['zip'].strip() else None
+        if 'contract' in data:
+            updates['contract'] = bool(data['contract'])
+            
+        if not updates:
+            return jsonify({
+                'success': False, 
+                'error': 'No valid fields to update'
+            }), 400
         
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                UPDATE authors 
-                SET au_name=%s, au_fname=%s, phone=%s, address=%s, city=%s, state=%s, zip=%s, contract=%s
-                WHERE au_id=%s
-            """, (au_name, au_fname, phone, address, city, state, zip_code, contract, au_id))
-            conn.commit()
-            return jsonify({'success': True, 'message': 'Author updated successfully'})
+        # Update the author in MongoDB
+        result = authors_collection.update_one(
+            {'au_id': au_id},
+            {'$set': updates}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({
+                'success': False, 
+                'error': 'Author not found'
+            }), 404
+            
+        return jsonify({
+            'success': True, 
+            'message': 'Author updated successfully'
+        })
+            
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/authors/<au_id>', methods=['DELETE'])
 def delete_author(au_id):
     """Delete an author and their orphaned books"""
     try:
-        with get_db_connection() as (cursor, conn):
-            # Get all books by this author
-            cursor.execute("""
-                SELECT DISTINCT title_id FROM titleauthor WHERE au_id = %s
-            """, (au_id,))
-            book_ids = [row['title_id'] for row in cursor.fetchall()]
-            
-            # Find books that will become orphaned
-            books_to_delete = []
-            for book_id in book_ids:
-                cursor.execute("SELECT COUNT(*) as count FROM titleauthor WHERE title_id = %s", (book_id,))
-                count = cursor.fetchone()['count']
-                if count == 1:
-                    books_to_delete.append(book_id)
-            
-            # Delete relationships
-            cursor.execute("DELETE FROM titleauthor WHERE au_id = %s", (au_id,))
-            
-            # Delete orphaned books
-            for book_id in books_to_delete:
-                cursor.execute("DELETE FROM titles WHERE title_id = %s", (book_id,))
-            
-            # Delete author
-            cursor.execute("DELETE FROM authors WHERE au_id = %s", (au_id,))
-            conn.commit()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Author deleted. {len(books_to_delete)} book(s) removed.'
-            })
+        # Start a session for transaction
+        with client.start_session() as session:
+            with session.start_transaction():
+                # First, check if author exists
+                author = authors_collection.find_one(
+                    {'au_id': au_id},
+                    session=session
+                )
+                
+                if not author:
+                    return jsonify({
+                        'success': False, 
+                        'error': 'Author not found'
+                    }), 404
+                
+                # Get all titles by this author
+                titles = list(titles_collection.find(
+                    {'authors.au_id': au_id},
+                    {'_id': 1, 'title_id': 1, 'authors': 1},
+                    session=session
+                ))
+                
+                # Delete the author
+                result = authors_collection.delete_one(
+                    {'au_id': au_id},
+                    session=session
+                )
+                
+                if result.deleted_count == 0:
+                    session.abort_transaction()
+                    return jsonify({
+                        'success': False, 
+                        'error': 'Failed to delete author'
+                    }), 500
+                
+                # Update titles to remove this author and delete any that become orphaned
+                for title in titles:
+                    # Remove this author from the title's authors array
+                    updated_authors = [
+                        author for author in title.get('authors', []) 
+                        if author.get('au_id') != au_id
+                    ]
+                    
+                    if not updated_authors:
+                        # If no authors left, delete the title
+                        titles_collection.delete_one(
+                            {'_id': title['_id']},
+                            session=session
+                        )
+                    else:
+                        # Otherwise, update the authors list
+                        titles_collection.update_one(
+                            {'_id': title['_id']},
+                            {'$set': {'authors': updated_authors}},
+                            session=session
+                        )
+                
+                session.commit_transaction()
+                return jsonify({
+                    'success': True, 
+                    'message': 'Author and related data deleted successfully'
+                })
+                
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
+
+def serialize_title(title):
+    """Convert MongoDB document to JSON serializable format"""
+    if not title:
+        return None
+    title['_id'] = str(title['_id'])  # Convert ObjectId to string
+    
+    # Ensure authors is always a list, even if empty
+    if 'authors' not in title:
+        title['authors'] = []
+    
+    # Convert author _id to string if it exists
+    for author in title['authors']:
+        if '_id' in author:
+            author['_id'] = str(author['_id'])
+    
+    # Convert date to string if it exists
+    if 'pubdate' in title and title['pubdate']:
+        if isinstance(title['pubdate'], datetime):
+            title['pubdate'] = title['pubdate'].strftime('%Y-%m-%d')
+    
+    return title
 
 # ==================== TITLE ENDPOINTS ====================
 
@@ -185,37 +292,95 @@ def delete_author(au_id):
 def get_titles():
     """Get all titles with their authors"""
     try:
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                SELECT 
-                    t.title_id,
-                    t.title,
-                    t.type,
-                    t.pub_id,
-                    t.price,
-                    t.advance,
-                    t.royalty,
-                    t.ytd_sales,
-                    t.notes,
-                    t.pubdate,
-                    GROUP_CONCAT(CONCAT(a.au_fname, ' ', a.au_name) SEPARATOR ', ') as authors,
-                    GROUP_CONCAT(a.au_id SEPARATOR ',') as author_ids
-                FROM titles t
-                LEFT JOIN titleauthor ta ON t.title_id = ta.title_id
-                LEFT JOIN authors a ON ta.au_id = a.au_id
-                GROUP BY t.title_id
-                ORDER BY t.title_id ASC
-            """)
-            titles = cursor.fetchall()
-            
-            # Convert date to display string (DD-MM-YYYY)
-            for title in titles:
-                if title['pubdate']:
-                    title['pubdate'] = title['pubdate'].strftime('%d-%m-%Y')
-            
-            return jsonify({'success': True, 'data': titles})
+        # Use aggregation to get titles with their authors
+        pipeline = [
+            {
+                '$lookup': {
+                    'from': 'authors',
+                    'localField': 'authors.au_id',
+                    'foreignField': 'au_id',
+                    'as': 'author_details'
+                }
+            },
+            {
+                '$project': {
+                    'title_id': 1,
+                    'title': 1,
+                    'type': 1,
+                    'pub_id': 1,
+                    'price': 1,
+                    'advance': 1,
+                    'royalty': 1,
+                    'ytd_sales': 1,
+                    'notes': 1,
+                    'pubdate': 1,
+                    'authors': {
+                        '$map': {
+                            'input': '$authors',
+                            'as': 'auth',
+                            'in': {
+                                'au_id': '$$auth.au_id',
+                                'au_ord': '$$auth.au_ord',
+                                'royaltyper': '$$auth.royaltyper',
+                                'author_details': {
+                                    '$arrayElemAt': [
+                                        {
+                                            '$filter': {
+                                                'input': '$author_details',
+                                                'as': 'ad',
+                                                'cond': {'$eq': ['$$ad.au_id', '$$auth.au_id']}
+                                            }
+                                        },
+                                        0
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                '$project': {
+                    'title_id': 1,
+                    'title': 1,
+                    'type': 1,
+                    'pub_id': 1,
+                    'price': 1,
+                    'advance': 1,
+                    'royalty': 1,
+                    'ytd_sales': 1,
+                    'notes': 1,
+                    'pubdate': 1,
+                    'authors': {
+                        '$map': {
+                            'input': '$authors',
+                            'as': 'auth',
+                            'in': {
+                                'au_id': '$$auth.au_id',
+                                'au_name': '$$auth.author_details.au_name',
+                                'au_fname': '$$auth.author_details.au_fname',
+                                'au_ord': '$$auth.au_ord',
+                                'royaltyper': '$$auth.royaltyper'
+                            }
+                        }
+                    }
+                }
+            },
+            {'$sort': {'title_id': 1}}
+        ]
+        
+        titles = list(titles_collection.aggregate(pipeline))
+        
+        return jsonify({
+            'success': True, 
+            'data': [serialize_title(title) for title in titles]
+        })
+        
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/titles', methods=['POST'])
 def add_title():
@@ -225,167 +390,407 @@ def add_title():
         title = data.get('title', '').strip()
         type_val = data.get('type', '').strip() or None
         pub_id = data.get('pub_id', '').strip() or None
-        price = data.get('price', '')
-        advance = data.get('advance', '')
-        royalty = data.get('royalty', '')
-        ytd_sales = data.get('ytd_sales', '')
+        price = data.get('price')
+        advance = data.get('advance')
+        royalty = data.get('royalty')
+        ytd_sales = data.get('ytd_sales')
         notes = data.get('notes', '').strip() or None
-        pubdate = data.get('pubdate', '').strip() or None
-        author_id = data.get('author_id')
-        royaltyper = data.get('royaltyper', 100)
+        pubdate = data.get('pubdate')
+        authors = data.get('authors', [])  # List of {au_id, royaltyper, au_ord}
         
-        if not title or not author_id:
-            return jsonify({'success': False, 'error': 'Title and author are required'}), 400
+        if not title or not authors:
+            return jsonify({
+                'success': False, 
+                'error': 'Title and authors are required'
+            }), 400
         
-        # Convert values
-        price_val = float(price) if price else None
-        advance_val = float(advance) if advance else None
-        royalty_val = int(royalty) if royalty else None
-        ytd_sales_val = int(ytd_sales) if ytd_sales else None
+        # Convert values - handle None and empty strings
+        price_val = float(price) if price is not None and str(price).strip() else None
+        advance_val = float(advance) if advance is not None and str(advance).strip() else None
+        royalty_val = int(royalty) if royalty is not None and str(royalty).strip() else None
+        ytd_sales_val = int(ytd_sales) if ytd_sales is not None and str(ytd_sales).strip() else None
         
-        # Normalize incoming pubdate to ISO (YYYY-MM-DD) so MySQL accepts it.
+        # Process pubdate
+        pubdate_obj = None
         if pubdate:
-            # Accept either YYYY-MM-DD or DD-MM-YYYY from the client
-            for fmt in ('%Y-%m-%d', '%d-%m-%Y'):
+            # Try parsing the date in different formats
+            for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y'):
                 try:
-                    parsed = datetime.strptime(pubdate, fmt).date()
-                    pubdate = parsed.strftime('%Y-%m-%d')
+                    pubdate_obj = datetime.strptime(pubdate, fmt)
                     break
                 except ValueError:
                     continue
-
+        
         # Generate unique title ID
         title_id = generate_title_id()
         
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                INSERT INTO titles (title_id, title, type, pub_id, price, advance, royalty, ytd_sales, notes, pubdate)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (title_id, title, type_val, pub_id, price_val, advance_val, royalty_val, ytd_sales_val, notes, pubdate))
-            
-            # Link to author
-            cursor.execute("""
-                INSERT INTO titleauthor (au_id, title_id, au_ord, royaltyper)
-                VALUES (%s, %s, 1, %s)
-            """, (author_id, title_id, royaltyper))
-            
-            conn.commit()
-            return jsonify({'success': True, 'message': 'Title added successfully', 'id': title_id})
+        # Prepare authors array with validation
+        author_updates = []
+        for i, author in enumerate(authors, 1):
+            au_id = author.get('au_id')
+            if not au_id:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Author ID is required for all authors'
+                }), 400
+                
+            # Verify author exists
+            author_doc = authors_collection.find_one({'au_id': au_id})
+            if not author_doc:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Author with ID {au_id} not found'
+                }), 404
+                
+            author_updates.append({
+                'au_id': au_id,
+                'au_ord': author.get('au_ord', i),
+                'royaltyper': int(author.get('royaltyper', 100))  # Default to 100%
+            })
+        
+        # Create title document
+        title_doc = {
+            'title_id': title_id,
+            'title': title,
+            'type': type_val,
+            'pub_id': pub_id,
+            'price': price_val,
+            'advance': advance_val,
+            'royalty': royalty_val,
+            'ytd_sales': ytd_sales_val,
+            'notes': notes,
+            'pubdate': pubdate_obj,
+            'authors': author_updates
+        }
+        
+        # Insert into MongoDB
+        result = titles_collection.insert_one(title_doc)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Title added successfully', 
+            'id': title_id,
+            'mongo_id': str(result.inserted_id)
+        })
+        
+    except ValueError as ve:
+        return jsonify({
+            'success': False, 
+            'error': f'Invalid data format: {str(ve)}'
+        }), 400
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/titles/<title_id>', methods=['GET'])
 def get_title(title_id):
     """Get a specific title with its authors"""
     try:
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                SELECT title_id, title, type, pub_id, price, advance, royalty, ytd_sales, notes, pubdate
-                FROM titles 
-                WHERE title_id = %s
-            """, (title_id,))
-            title = cursor.fetchone()
-            
-            if not title:
-                return jsonify({'success': False, 'error': 'Title not found'}), 404
-            
-            # Convert date to display string (DD-MM-YYYY)
-            if title['pubdate']:
-                title['pubdate'] = title['pubdate'].strftime('%d-%m-%Y')
-            
-            # Get authors
-            cursor.execute("""
-                SELECT a.au_id, a.au_name, a.au_fname, ta.au_ord, ta.royaltyper
-                FROM authors a
-                JOIN titleauthor ta ON a.au_id = ta.au_id
-                WHERE ta.title_id = %s
-                ORDER BY ta.au_ord
-            """, (title_id,))
-            title['authors'] = cursor.fetchall()
-            
-            return jsonify({'success': True, 'data': title})
+        # Use aggregation to get the title with author details
+        pipeline = [
+            {'$match': {'title_id': title_id}},
+            {
+                '$lookup': {
+                    'from': 'authors',
+                    'localField': 'authors.au_id',
+                    'foreignField': 'au_id',
+                    'as': 'author_details'
+                }
+            },
+            {
+                '$project': {
+                    'title_id': 1,
+                    'title': 1,
+                    'type': 1,
+                    'pub_id': 1,
+                    'price': 1,
+                    'advance': 1,
+                    'royalty': 1,
+                    'ytd_sales': 1,
+                    'notes': 1,
+                    'pubdate': 1,
+                    'authors': {
+                        '$map': {
+                            'input': '$authors',
+                            'as': 'auth',
+                            'in': {
+                                'au_id': '$$auth.au_id',
+                                'au_ord': '$$auth.au_ord',
+                                'royaltyper': '$$auth.royaltyper',
+                                'author_details': {
+                                    '$arrayElemAt': [
+                                        {
+                                            '$filter': {
+                                                'input': '$author_details',
+                                                'as': 'ad',
+                                                'cond': {'$eq': ['$$ad.au_id', '$$auth.au_id']}
+                                            }
+                                        },
+                                        0
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                '$project': {
+                    'title_id': 1,
+                    'title': 1,
+                    'type': 1,
+                    'pub_id': 1,
+                    'price': 1,
+                    'advance': 1,
+                    'royalty': 1,
+                    'ytd_sales': 1,
+                    'notes': 1,
+                    'pubdate': 1,
+                    'authors': {
+                        '$map': {
+                            'input': '$authors',
+                            'as': 'auth',
+                            'in': {
+                                'au_id': '$$auth.au_id',
+                                'au_name': '$$auth.author_details.au_name',
+                                'au_fname': '$$auth.author_details.au_fname',
+                                'au_ord': '$$auth.au_ord',
+                                'royaltyper': '$$auth.royaltyper'
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+        
+        title = next(titles_collection.aggregate(pipeline), None)
+        
+        if not title:
+            return jsonify({
+                'success': False, 
+                'error': 'Title not found'
+            }), 404
+        
+        return jsonify({
+            'success': True, 
+            'data': serialize_title(title)
+        })
+        
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/titles/<title_id>', methods=['PUT'])
 def update_title(title_id):
     """Update an existing title"""
     try:
         data = request.json
-        title = data.get('title', '').strip()
-        type_val = data.get('type', '').strip() or None
-        pub_id = data.get('pub_id', '').strip() or None
-        price = data.get('price', '')
-        advance = data.get('advance', '')
-        royalty = data.get('royalty', '')
-        ytd_sales = data.get('ytd_sales', '')
-        notes = data.get('notes', '').strip() or None
-        pubdate = data.get('pubdate', '').strip() or None
-        authors = data.get('authors', [])  # List of {au_id, royaltyper}
         
-        if not title:
-            return jsonify({'success': False, 'error': 'Title is required'}), 400
+        # Check if title exists
+        existing_title = titles_collection.find_one({'title_id': title_id})
+        if not existing_title:
+            return jsonify({
+                'success': False, 
+                'error': 'Title not found'
+            }), 404
         
-        # Convert values
-        price_val = float(price) if price else None
-        advance_val = float(advance) if advance else None
-        royalty_val = int(royalty) if royalty else None
-        ytd_sales_val = int(ytd_sales) if ytd_sales else None
+        updates = {}
         
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                UPDATE titles 
-                SET title=%s, type=%s, pub_id=%s, price=%s, advance=%s, royalty=%s, ytd_sales=%s, notes=%s, pubdate=%s
-                WHERE title_id=%s
-            """, (title, type_val, pub_id, price_val, advance_val, royalty_val, ytd_sales_val, notes, pubdate, title_id))
+        # Only include fields that are provided and not empty
+        if 'title' in data and data['title'].strip():
+            updates['title'] = data['title'].strip()
+        if 'type' in data:
+            updates['type'] = data['type'].strip() if data['type'].strip() else None
+        if 'pub_id' in data:
+            updates['pub_id'] = data['pub_id'].strip() if data['pub_id'].strip() else None
+        if 'price' in data and data['price'] is not None:
+            price_str = str(data['price']).strip()
+            updates['price'] = float(price_str) if price_str else None
+        if 'advance' in data and data['advance'] is not None:
+            advance_str = str(data['advance']).strip()
+            updates['advance'] = float(advance_str) if advance_str else None
+        if 'royalty' in data and data['royalty'] is not None:
+            royalty_str = str(data['royalty']).strip()
+            updates['royalty'] = int(royalty_str) if royalty_str else None
+        if 'ytd_sales' in data and data['ytd_sales'] is not None:
+            ytd_str = str(data['ytd_sales']).strip()
+            updates['ytd_sales'] = int(ytd_str) if ytd_str else None
+        if 'notes' in data:
+            updates['notes'] = data['notes'].strip() if data['notes'].strip() else None
             
-            # Update author links
-            cursor.execute("DELETE FROM titleauthor WHERE title_id = %s", (title_id,))
-            for idx, author in enumerate(authors, 1):
-                cursor.execute("""
-                    INSERT INTO titleauthor (au_id, title_id, au_ord, royaltyper)
-                    VALUES (%s, %s, %s, %s)
-                """, (author['au_id'], title_id, idx, author.get('royaltyper', 100)))
+        # Handle pubdate if provided
+        if 'pubdate' in data and data['pubdate']:
+            pubdate = data['pubdate'].strip()
+            # Try parsing the date in different formats
+            for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y'):
+                try:
+                    updates['pubdate'] = datetime.strptime(pubdate, fmt)
+                    break
+                except ValueError:
+                    continue
+        
+        # Handle authors if provided
+        if 'authors' in data and isinstance(data['authors'], list):
+            authors = data['authors']
+            author_updates = []
             
-            conn.commit()
-            return jsonify({'success': True, 'message': 'Title updated successfully'})
+            for i, author in enumerate(authors, 1):
+                au_id = author.get('au_id')
+                if not au_id:
+                    return jsonify({
+                        'success': False, 
+                        'error': 'Author ID is required for all authors'
+                    }), 400
+                
+                # Verify author exists
+                author_doc = authors_collection.find_one({'au_id': au_id})
+                if not author_doc:
+                    return jsonify({
+                        'success': False, 
+                        'error': f'Author with ID {au_id} not found'
+                    }), 404
+                
+                author_updates.append({
+                    'au_id': au_id,
+                    'au_ord': author.get('au_ord', i),
+                    'royaltyper': int(author.get('royaltyper', 100))  # Default to 100%
+                })
+            
+            updates['authors'] = author_updates
+        
+        # Update the title in MongoDB
+        result = titles_collection.update_one(
+            {'title_id': title_id},
+            {'$set': updates} if updates else {'$setOnInsert': {'title_id': title_id}}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({
+                'success': False, 
+                'error': 'Failed to update title'
+            }), 500
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Title updated successfully'
+        })
+        
+    except ValueError as ve:
+        return jsonify({
+            'success': False, 
+            'error': f'Invalid data format: {str(ve)}'
+        }), 400
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/titles/<title_id>', methods=['DELETE'])
 def delete_title(title_id):
     """Delete a title"""
     try:
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("DELETE FROM titleauthor WHERE title_id = %s", (title_id,))
-            cursor.execute("DELETE FROM titles WHERE title_id = %s", (title_id,))
-            conn.commit()
-            return jsonify({'success': True, 'message': 'Title deleted successfully'})
+        result = titles_collection.delete_one({'title_id': title_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({
+                'success': False, 
+                'error': 'Title not found'
+            }), 404
+            
+        return jsonify({
+            'success': True, 
+            'message': 'Title deleted successfully'
+        })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 @app.route('/api/titles/by-author/<au_id>', methods=['GET'])
 def get_titles_by_author(au_id):
     """Get all titles by a specific author"""
     try:
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("""
-                SELECT t.title_id, t.title, t.type, t.price, t.pubdate, ta.royaltyper
-                FROM titles t
-                JOIN titleauthor ta ON t.title_id = ta.title_id
-                WHERE ta.au_id = %s
-                ORDER BY t.title_id ASC
-            """, (au_id,))
-            titles = cursor.fetchall()
-            
+        # Find all titles that have this author in their authors array
+        pipeline = [
+            {'$match': {'authors.au_id': au_id}},
+            {
+                '$lookup': {
+                    'from': 'authors',
+                    'localField': 'authors.au_id',
+                    'foreignField': 'au_id',
+                    'as': 'author_details'
+                }
+            },
+            {
+                '$project': {
+                    'title_id': 1,
+                    'title': 1,
+                    'type': 1,
+                    'price': 1,
+                    'pubdate': 1,
+                    'authors': {
+                        '$filter': {
+                            'input': '$authors',
+                            'as': 'auth',
+                            'cond': {'$eq': ['$$auth.au_id', au_id]}
+                        }
+                    },
+                    'author_details': {
+                        '$arrayElemAt': [
+                            {
+                                '$filter': {
+                                    'input': '$author_details',
+                                    'as': 'ad',
+                                    'cond': {'$eq': ['$$ad.au_id', au_id]}
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                '$project': {
+                    'title_id': 1,
+                    'title': 1,
+                    'type': 1,
+                    'price': 1,
+                    'pubdate': 1,
+                    'royaltyper': {'$arrayElemAt': ['$authors.royaltyper', 0]},
+                    'au_name': '$author_details.au_name',
+                    'au_fname': '$author_details.au_fname'
+                }
+            },
+            {'$sort': {'title_id': 1}}
+        ]
+        
+        titles = list(titles_collection.aggregate(pipeline))
+        
+        # Convert ObjectIds and dates to JSON serializable format
+        serialized_titles = []
+        for title in titles:
+            # Serialize all ObjectIds recursively
+            title = serialize_objectid(title)
             # Convert dates to display string (DD-MM-YYYY)
-            for title in titles:
-                if title['pubdate']:
-                    title['pubdate'] = title['pubdate'].strftime('%d-%m-%Y')
-            
-            return jsonify({'success': True, 'data': titles})
+            if 'pubdate' in title and title['pubdate'] and isinstance(title['pubdate'], datetime):
+                title['pubdate'] = title['pubdate'].strftime('%d-%m-%Y')
+            serialized_titles.append(title)
+        
+        return jsonify({
+            'success': True, 
+            'data': serialized_titles
+        })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 # ==================== HEALTH CHECK ====================
 
@@ -393,11 +798,21 @@ def get_titles_by_author(au_id):
 def health_check():
     """Check if the API and database are working"""
     try:
-        with get_db_connection() as (cursor, conn):
-            cursor.execute("SELECT 1")
-            return jsonify({'success': True, 'message': 'API and database are healthy'})
+        # Try to ping the database
+        client.admin.command('ping')
+        return jsonify({
+            'success': True, 
+            'message': 'API and database are healthy'
+        })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Production: use environment variable for port, debug=False
+    # Development: debug=True
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)

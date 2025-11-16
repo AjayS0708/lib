@@ -448,6 +448,16 @@ document.getElementById('addTitleForm').addEventListener('submit', async (e) => 
     const otherGenre = document.getElementById('titleGenreOther');
     const selectedGenre = (otherGenre && otherGenre.style.display !== 'none' && otherGenre.value.trim()) ? otherGenre.value.trim() : genreSelect.value.trim();
 
+    // Get author information
+    const authorId = document.getElementById('titleAuthor').value.trim();
+    const royaltyPer = parseInt(document.getElementById('titleRoyaltyPer').value) || 100;
+    
+    // Validate that author is selected
+    if (!authorId) {
+        showToast('Please select an author', 'error');
+        return;
+    }
+    
     const titleData = {
         title: document.getElementById('titleName').value.trim(),
         type: selectedGenre,
@@ -458,8 +468,11 @@ document.getElementById('addTitleForm').addEventListener('submit', async (e) => 
         ytd_sales: document.getElementById('titleYtdSales').value.trim(),
         notes: document.getElementById('titleNotes').value.trim(),
         pubdate: document.getElementById('titlePubDate').value.trim(),
-        author_id: document.getElementById('titleAuthor').value,
-        royaltyper: document.getElementById('titleRoyaltyPer').value || 100
+        authors: [{
+            au_id: authorId,
+            royaltyper: royaltyPer,
+            au_ord: 1
+        }]
     };
     
     try {
