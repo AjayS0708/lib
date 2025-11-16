@@ -19,22 +19,35 @@ MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
 DB_NAME = os.getenv('DB_NAME', 'BooksDB')
 
 # Initialize MongoDB client with connection pooling for production
+# Note: Python 3.13 has SSL compatibility issues with MongoDB Atlas
+# Use Python 3.11 or 3.12 (specified in runtime.txt)
 try:
+    # Ensure connection string has proper parameters for MongoDB Atlas
+    connection_uri = MONGO_URI
+    if connection_uri.startswith('mongodb+srv://'):
+        # Add retryWrites if not present
+        if 'retryWrites=true' not in connection_uri.lower():
+            separator = '&' if '?' in connection_uri else '?'
+            connection_uri = f"{connection_uri}{separator}retryWrites=true"
+    
     client = MongoClient(
-        MONGO_URI,
-        serverSelectionTimeoutMS=5000,  # 5 second timeout
-        connectTimeoutMS=5000,
-        socketTimeoutMS=5000,
+        connection_uri,
+        serverSelectionTimeoutMS=30000,  # 30 second timeout (increased for initial connection)
+        connectTimeoutMS=30000,
+        socketTimeoutMS=30000,
         maxPoolSize=50,  # Connection pool size
         retryWrites=True
     )
-    # Test connection
+    
+    # Test connection with longer timeout
     client.admin.command('ping')
     db = client[DB_NAME]
     print(f"✅ Successfully connected to MongoDB database: {DB_NAME}")
 except Exception as e:
     print(f"❌ MongoDB connection error: {str(e)}")
     print("⚠️  Make sure MONGODB_URI is set correctly in environment variables")
+    print("⚠️  Check MongoDB Atlas Network Access allows connections from Render (0.0.0.0/0)")
+    print("⚠️  Ensure you're using Python 3.11 or 3.12 (not 3.13) - check runtime.txt")
     raise
 
 # Collections
