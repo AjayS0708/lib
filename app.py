@@ -34,19 +34,41 @@ def init_mongodb():
     try:
         # Ensure connection string has proper parameters for MongoDB Atlas
         connection_uri = MONGO_URI
-        if connection_uri.startswith('mongodb+srv://'):
-            # Add retryWrites if not present
-            if 'retryWrites=true' not in connection_uri.lower():
-                separator = '&' if '?' in connection_uri else '?'
-                connection_uri = f"{connection_uri}{separator}retryWrites=true"
         
+        # Parse the connection string
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        
+        # Parse the URI
+        parsed = urlparse(connection_uri)
+        query = parse_qs(parsed.query)
+        
+        # Add required parameters
+        query['retryWrites'] = 'true'
+        query['w'] = 'majority'
+        
+        # For MongoDB Atlas, we need to use tls/ssl
+        if 'ssl' not in query:
+            query['ssl'] = 'true'
+            
+        # Rebuild the query string
+        new_query = urlencode(query, doseq=True)
+        
+        # Rebuild the URI
+        connection_uri = urlunparse(parsed._replace(query=new_query))
+        
+        print(f"Connecting to MongoDB with URI: {connection_uri.replace(parsed.password, '***') if parsed.password else connection_uri}")
+        
+        # Configure the client with SSL and other options
         client = MongoClient(
             connection_uri,
-            serverSelectionTimeoutMS=30000,  # 30 second timeout
-            connectTimeoutMS=30000,
-            socketTimeoutMS=30000,
-            maxPoolSize=50,  # Connection pool size
-            retryWrites=True
+            serverSelectionTimeoutMS=5000,  # 5 second timeout
+            connectTimeoutMS=10000,         # 10 second connection timeout
+            socketTimeoutMS=45000,          # 45 second socket timeout
+            maxPoolSize=50,                 # Connection pool size
+            tls=True,                       # Enable TLS
+            tlsAllowInvalidCertificates=False,
+            retryWrites=True,
+            appname='books-manager-app'     # Identify this connection in MongoDB logs
         )
         
         # Test connection
