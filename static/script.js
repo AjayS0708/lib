@@ -321,19 +321,39 @@ function renderTitlesList() {
         return;
     }
     
-    container.innerHTML = titles.map(title => `
+    container.innerHTML = titles.map(title => {
+        // Format authors
+        let authorsText = '';
+        if (title.authors) {
+            if (Array.isArray(title.authors)) {
+                // If it's an array of author objects
+                const authorNames = title.authors.map(author => 
+                    `${author.au_fname || ''} ${author.au_name}`.trim()
+                );
+                if (authorNames.length > 2) {
+                    authorsText = `${authorNames.slice(0, 2).join(', ')} +${authorNames.length - 2} more`;
+                } else {
+                    authorsText = authorNames.join(', ');
+                }
+            } else if (typeof title.authors === 'string') {
+                // If it's already a string
+                authorsText = title.authors;
+            }
+        }
+        
+        return `
         <div class="list-item" data-id="${title.title_id}">
             <div class="list-item-content">
                 <div class="list-item-title">${title.title}</div>
                 <div class="list-item-meta">
                     ${title.type ? `<i class="fas fa-tag"></i> ${title.type}` : ''}
                     ${title.price ? `<i class="fas fa-rupee-sign"></i> ${formatCurrencyINR(title.price)}` : ''}
-                    ${title.authors ? `<i class="fas fa-user"></i> ${title.authors}` : ''}
+                    ${authorsText ? `<i class="fas fa-user"></i> ${authorsText}` : ''}
                 </div>
             </div>
             <div class="list-item-badge">${title.title_id}</div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
     
     // Add click handlers
     document.querySelectorAll('#titlesList .list-item').forEach(item => {
