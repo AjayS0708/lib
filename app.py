@@ -14,45 +14,68 @@ CORS(app)
 # Load environment variables
 load_dotenv()
 
-# MongoDB connection
+# MongoDB connection - Lazy initialization to allow app to start even if DB is temporarily unavailable
 MONGO_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
 DB_NAME = os.getenv('DB_NAME', 'BooksDB')
 
-# Initialize MongoDB client with connection pooling for production
-# Note: Python 3.13 has SSL compatibility issues with MongoDB Atlas
-# Use Python 3.11 or 3.12 (specified in runtime.txt)
-try:
-    # Ensure connection string has proper parameters for MongoDB Atlas
-    connection_uri = MONGO_URI
-    if connection_uri.startswith('mongodb+srv://'):
-        # Add retryWrites if not present
-        if 'retryWrites=true' not in connection_uri.lower():
-            separator = '&' if '?' in connection_uri else '?'
-            connection_uri = f"{connection_uri}{separator}retryWrites=true"
-    
-    client = MongoClient(
-        connection_uri,
-        serverSelectionTimeoutMS=30000,  # 30 second timeout (increased for initial connection)
-        connectTimeoutMS=30000,
-        socketTimeoutMS=30000,
-        maxPoolSize=50,  # Connection pool size
-        retryWrites=True
-    )
-    
-    # Test connection with longer timeout
-    client.admin.command('ping')
-    db = client[DB_NAME]
-    print(f"✅ Successfully connected to MongoDB database: {DB_NAME}")
-except Exception as e:
-    print(f"❌ MongoDB connection error: {str(e)}")
-    print("⚠️  Make sure MONGODB_URI is set correctly in environment variables")
-    print("⚠️  Check MongoDB Atlas Network Access allows connections from Render (0.0.0.0/0)")
-    print("⚠️  Ensure you're using Python 3.11 or 3.12 (not 3.13) - check runtime.txt")
-    raise
+# Global variables for MongoDB connection
+client = None
+db = None
+authors_collection = None
+titles_collection = None
 
-# Collections
-authors_collection = db['authors']
-titles_collection = db['titles']
+def init_mongodb():
+    """Initialize MongoDB connection - called on first request"""
+    global client, db, authors_collection, titles_collection
+    
+    if client is not None:
+        return  # Already initialized
+    
+    try:
+        # Ensure connection string has proper parameters for MongoDB Atlas
+        connection_uri = MONGO_URI
+        if connection_uri.startswith('mongodb+srv://'):
+            # Add retryWrites if not present
+            if 'retryWrites=true' not in connection_uri.lower():
+                separator = '&' if '?' in connection_uri else '?'
+                connection_uri = f"{connection_uri}{separator}retryWrites=true"
+        
+        client = MongoClient(
+            connection_uri,
+            serverSelectionTimeoutMS=30000,  # 30 second timeout
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            maxPoolSize=50,  # Connection pool size
+            retryWrites=True
+        )
+        
+        # Test connection
+        client.admin.command('ping')
+        db = client[DB_NAME]
+        authors_collection = db['authors']
+        titles_collection = db['titles']
+        print(f"✅ Successfully connected to MongoDB database: {DB_NAME}")
+    except Exception as e:
+        print(f"❌ MongoDB connection error: {str(e)}")
+        print("⚠️  Make sure MONGODB_URI is set correctly in environment variables")
+        print("⚠️  Check MongoDB Atlas Network Access allows connections from Render (0.0.0.0/0)")
+        print("⚠️  IMPORTANT: Set Python version to 3.11 in Render dashboard (Settings → Environment)")
+        raise
+
+# Helper function to ensure MongoDB is initialized
+def ensure_db():
+    """Ensure MongoDB connection is initialized"""
+    global client, db, authors_collection, titles_collection
+    if client is None or db is None:
+        init_mongodb()
+    return db, authors_collection, titles_collection
+
+# Try to initialize on import, but don't crash if it fails
+try:
+    init_mongodb()
+except Exception as e:
+    print("⚠️  MongoDB connection will be retried on first request")
+    # Don't raise - allow app to start
 
 def generate_author_id():
     """Generate a unique author ID in format XXX-XX-XXXX"""
@@ -95,6 +118,7 @@ def serialize_author(author):
 def get_authors():
     """Get all authors"""
     try:
+        _, authors_collection, _ = ensure_db()
         authors = list(authors_collection.find({}).sort('au_id', 1))
         return jsonify({
             'success': True, 
@@ -110,6 +134,7 @@ def get_authors():
 def add_author():
     """Add a new author"""
     try:
+        _, authors_collection, _ = ensure_db()
         data = request.json
         au_name = data.get('au_name', '').strip()
         
@@ -826,6 +851,8 @@ def get_titles_by_author(au_id):
 def health_check():
     """Check if the API and database are working"""
     try:
+        # Ensure MongoDB is initialized
+        ensure_db()
         # Try to ping the database
         client.admin.command('ping')
         return jsonify({
@@ -843,4 +870,5 @@ if __name__ == '__main__':
     # Development: debug=True
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     port = int(os.getenv('PORT', 5000))
+    # For Render, must bind to 0.0.0.0 and use PORT env var
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
