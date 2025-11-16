@@ -453,7 +453,7 @@ function populateAuthorSelects() {
         select.innerHTML = '<option value="">Select an author</option>' +
             authors.map(author => {
                 const fullName = `${author.au_fname || ''} ${author.au_name}`.trim();
-                return `<option value="${author.au_id}">${fullName} (${author.au_id})</option>`;
+                return `<option value="${author.au_id}">${fullName}</option>`;
             }).join('');
         if (currentValue) select.value = currentValue;
     });
