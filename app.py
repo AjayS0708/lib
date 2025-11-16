@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson import ObjectId
@@ -7,9 +7,18 @@ import os
 import random
 import string
 from dotenv import load_dotenv
+from whitenoise import WhiteNoise
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 CORS(app)
+
+# Configure Whitenoise for static files
+app.wsgi_app = WhiteNoise(
+    app.wsgi_app,
+    root='static/',
+    prefix='static/',
+    index_file=True
+)
 
 # Load environment variables
 load_dotenv()
